@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>PONG 🏓</title>
+  <style>
+    body {
+      background: #0d0d0d;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    canvas {
+      background: #111;
+      border: 3px solid white;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="pong" width="800" height="500"></canvas>
+
+  <script>
+    const canvas = document.getElementById("pong");
+    const ctx = canvas.getContext("2d");
+
+    // Objetos
+    const ball = { x: 400, y: 250, radius: 10, dx: 4, dy: 3 };
+    const player = { x: 20, y: 200, w: 10, h: 100 };
+    const cpu = { x: 770, y: 200, w: 10, h: 100 };
+    const score = { player: 0, cpu: 0 };
+    const keys = { up: false, down: false };
+
+    function drawRect(x, y, w, h, color = "white") {
+      ctx.fillStyle = color;
+      ctx.fillRect(x, y, w, h);
+    }
+
+    function drawCircle(x, y, r, color = "white") {
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.fill();
+    }
+
+    function drawText(text, x, y) {
+      ctx.font = "30px Arial";
+      ctx.fillStyle = "white";
+      ctx.fillText(text, x, y);
+    }
+
+    function movePlayer() {
+      if (keys.up && player.y > 0) player.y -= 6;
+      if (keys.down && player.y + player.h < canvas.height) player.y += 6;
+    }
+
+    function moveCpu() {
+      if (cpu.y + cpu.h / 2 < ball.y) cpu.y += 3;
+      else cpu.y -= 3;
+    }
+
+    function moveBall() {
+      ball.x += ball.dx;
+      ball.y += ball.dy;
+
+      // Colisão com bordas
+      if (ball.y - ball.radius < 0 || ball.y + ball.radius > canvas.height)
+        ball.dy *= -1;
+
+      // Colisão com jogador
+      if (
+        ball.x - ball.radius < player.x + player.w &&
+        ball.y > player.y &&
+        ball.y < player.y + player.h
+      ) {
+        ball.dx *= -1;
+      }
+
+      // Colisão com CPU
+      if (
+        ball.x + ball.radius > cpu.x &&
+        ball.y > cpu.y &&
+        ball.y < cpu.y + cpu.h
+      ) {
+        ball.dx *= -1;
+      }
+
+      // Pontuação
+      if (ball.x < 0) {
+        score.cpu++;
+        resetBall();
+      } else if (ball.x > canvas.width) {
+        score.player++;
+        resetBall();
+      }
+    }
+
+    function resetBall() {
+      ball.x = canvas.width / 2;
+      ball.y = canvas.height / 2;
+      ball.dx *= -1;
+    }
+
+    function draw() {
+      drawRect(0, 0, canvas.width, canvas.height, "#111");
+      drawCircle(ball.x, ball.y, ball.radius);
+      drawRect(player.x, player.y, player.w, player.h);
+      drawRect(cpu.x, cpu.y, cpu.w, cpu.h);
+      drawText(`${score.player} | ${score.cpu}`, 360, 50);
+    }
+
+    function update() {
+      movePlayer();
+      moveCpu();
+      moveBall();
+      draw();
+      requestAnimationFrame(update);
+    }
+
+    // Controles
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowUp") keys.up = true;
+      if (e.key === "ArrowDown") keys.down = true;
+    });
+
+    document.addEventListener("keyup", (e) => {
+      if (e.key === "ArrowUp") keys.up = false;
+      if (e.key === "ArrowDown") keys.down = false;
+    });
+
+    update();
+  </script>
+</body>
+</html>
