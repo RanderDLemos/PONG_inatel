@@ -1,185 +1,165 @@
 <!DOCTYPE html>
 <html lang="pt-br">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Pong Game</title>
-        <style>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pong Game</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            height: 100%;
+            width: 100%;
+        }
 
-            html, body {
-                margin: 0;
-                padding: 0;
+        body {
+            background-image: url('inatel.jpg'); /* troque depois */
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+
+        #canva {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="canva">O navegador não suporta canvas.</canvas>
+
+    <script>
+        const canva = document.getElementById("canva");
+        const ctx = canva.getContext("2d");
+
+        // --- VARIÁVEIS DO JOGO ---
+        let player_1, player_2, ball, player_1_pt, player_2_pt;
+        let time_temp = 0;
+
+        function resizeCanvas() {
+            canva.width = window.innerWidth;
+            canva.height = window.innerHeight;
+            initGame(); // reinicia posições ao redimensionar
+        }
+
+        function initGame() {
+            player_1 = {x: 30, y: (canva.height / 2) - 50, w: 20, h: 100, move: 0};
+            player_2 = {x: canva.width - 50, y: (canva.height / 2) - 50, w: 20, h: 100, move: 0};
+            player_1_pt = {x: (canva.width / 2) - 100, y: 60, points: 0};
+            player_2_pt = {x: (canva.width / 2) + 60, y: 60, points: 0};
+            ball = {x: canva.width / 2, y: canva.height / 2, vx: 6, vy: 6, radius: 15};
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // --- CONTROLES ---
+        window.onkeydown = function(event) {
+            if(event.key === "ArrowUp") player_2.move = -8;
+            else if(event.key === "ArrowDown") player_2.move = 8;
+            if(event.key === "w") player_1.move = -8;
+            else if(event.key === "s") player_1.move = 8;
+        }
+
+        window.onkeyup = function(event) {
+            if(["ArrowUp", "ArrowDown"].includes(event.key)) player_2.move = 0;
+            if(["w", "s"].includes(event.key)) player_1.move = 0;
+        }
+
+        // --- FUNÇÕES DE DESENHO ---
+        function draw_fill_rect(x, y, w, h, color) {
+            ctx.fillStyle = color;
+            ctx.fillRect(x, y, w, h);
+        }
+
+        function draw_line(x1, y1, x2, y2, color, width = 1, dash = null) {
+            ctx.strokeStyle = color;
+            ctx.lineWidth = width;
+            if(dash) ctx.setLineDash(dash);
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
+        function draw_text(text, x, y, color, size = 40, font = "Arial Black") {
+            ctx.fillStyle = color;
+            ctx.font = `${size}px ${font}`;
+            ctx.fillText(text, x, y);
+        }
+
+        function draw_circle(x, y, radius, color) {
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, 2 * Math.PI);
+            ctx.fill();
+        }
+
+        function colision_rect_ball(rect, ball) {
+            return (
+                (ball.x + ball.radius) > rect.x &&
+                (ball.x - ball.radius) < (rect.x + rect.w) &&
+                (ball.y + ball.radius) > rect.y &&
+                (ball.y - ball.radius) < (rect.y + rect.h)
+            );
+        }
+
+        // --- LÓGICA DO JOGO ---
+        function draw() {
+            ctx.clearRect(0, 0, canva.width, canva.height);
+            draw_line(canva.width / 2, 0, canva.width / 2, canva.height, "white", 3, [20, 15]);
+            draw_fill_rect(player_1.x, player_1.y, player_1.w, player_1.h, "white");
+            draw_fill_rect(player_2.x, player_2.y, player_2.w, player_2.h, "white");
+            draw_circle(ball.x, ball.y, ball.radius, "white");
+            draw_text(player_1_pt.points, player_1_pt.x, player_1_pt.y, "white");
+            draw_text(player_2_pt.points, player_2_pt.x, player_2_pt.y, "white");
+        }
+
+        function physics() {
+            ball.x += ball.vx;
+            ball.y += ball.vy;
+
+            if (ball.y - ball.radius < 0 || ball.y + ball.radius > canva.height) {
+                ball.vy = -ball.vy;
             }
 
-            .container {
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                width: 100vw;
-                height: 100vh;
+            if (ball.x - ball.radius < 0) {
+                player_2_pt.points++;
+                resetBall();
+            } else if (ball.x + ball.radius > canva.width) {
+                player_1_pt.points++;
+                resetBall();
             }
 
-            #canva {
-                width: 800px;
-                height: 600px;
-                border: 1px solid silver;
-            }
+            if (colision_rect_ball(player_1, ball)) ball.vx = Math.abs(ball.vx);
+            if (colision_rect_ball(player_2, ball)) ball.vx = -Math.abs(ball.vx);
 
-        </style>
-    </head>
-    <body>
+            player_1.y += player_1.move;
+            player_2.y += player_2.move;
 
-        <div class="container">
-            <canvas id="canva" width="800" height="600">O navegador não suporta canvas.</canvas>
-        </div>
+            player_1.y = Math.max(0, Math.min(canva.height - player_1.h, player_1.y));
+            player_2.y = Math.max(0, Math.min(canva.height - player_2.h, player_2.y));
+        }
 
-        <script>
-            var canva = document.getElementById("canva")
-            var ctx = canva.getContext("2d")
-            var time_temp = 0
+        function resetBall() {
+            ball.x = canva.width / 2;
+            ball.y = canva.height / 2;
+            ball.vx = (Math.random() > 0.5 ? 6 : -6);
+            ball.vy = (Math.random() > 0.5 ? 6 : -6);
+        }
 
-            var player_1 = {x: 3, y: (canva.offsetHeight / 2) - 50, w: 30, h: 100, move: 0}
-            var player_2 = {x: canva.offsetWidth - 35, y: (canva.offsetHeight / 2) - 50, w: 30, h: 100, move: 0}
+        function update() {
+            physics();
+            draw();
+            requestAnimationFrame(update);
+        }
 
-            var sep_line = {x1: canva.offsetWidth / 2, y1: 0, x2: canva.offsetWidth / 2, y2: canva.offsetHeight}
-            var player_1_pt = {x: (canva.offsetWidth / 2) - 100, y: 40, points: 0}
-            var player_2_pt = {x: (canva.offsetWidth / 2) + 70, y: 40, points: 0}
+        update();
+    </script>
 
-            var ball = {x: (canva.offsetWidth / 2), y: (canva.offsetHeight / 2), vx: 5, vy: 5, radius: 20}
-
-            window.onkeydown = function(event) {
-                if(event.key == "ArrowUp") {
-                    player_2.move = -5
-                } else if(event.key == "ArrowDown") {
-                    player_2.move = 5
-                }
-
-                if(event.key == "w") {
-                    player_1.move = -5
-                } else if(event.key == "s") {
-                    player_1.move = 5
-                }
-            }
-
-            window.onkeyup = function(event) {
-                if(event.key == "ArrowUp") {
-                    player_2.move = 0
-                } else if(event.key == "ArrowDown") {
-                    player_2.move = 0
-                }
-
-                if(event.key == "w") {
-                    player_1.move = 0
-                } else if(event.key == "s") {
-                    player_1.move = 0
-                }
-            }
-
-            function draw_fill_rect(x, y, w, h, color) {
-                ctx.fillStyle = color
-                ctx.fillRect(x, y, w, h)
-            }
-
-            function draw_line(x1, y1, x2, y2, color, width = 1, dash = null) {
-                ctx.strokeStyle = color
-                ctx.lineWidth = width
-                if(dash) ctx.setLineDash(dash)
-                ctx.beginPath()
-                ctx.moveTo(x1, y1)
-                ctx.lineTo(x2, y2)
-                ctx.stroke()
-            }
-
-            function draw_text(text, x, y, color, size = 12, font = "Georgia") {
-                ctx.fillStyle = color
-                ctx.font = `${size}px ${font}`
-                ctx.fillText(text, x, y)
-            }
-
-            function draw_circle(x, y, radius, color) {
-                ctx.fillStyle = color
-                ctx.beginPath()
-                ctx.arc(x, y, radius, 0, 2 * Math.PI)
-                ctx.fill()
-            }
-
-            function colision_rect_ball(rect, ball) {
-                return (ball.x + ball.radius) > rect.x && (ball.x - ball.radius) < (rect.x + rect.w) &&
-                (ball.y + ball.radius) > rect.y && (ball.y - ball.radius) < (rect.y + rect.h)
-            }
-
-            function draw(time) {
-                draw_fill_rect(0, 0, canva.offsetWidth, canva.offsetHeight, "black")
-
-                draw_fill_rect(player_1.x, player_1.y, player_1.w, player_1.h, "white")
-
-                draw_text(player_1_pt.points, player_1_pt.x, player_1_pt.y, "white", 50)
-
-                draw_line(sep_line.x1, sep_line.y1, sep_line.x2, sep_line.y2, "white", 3, [15, 10])
-
-                draw_text(player_2_pt.points, player_2_pt.x, player_2_pt.y, "white", 50)
-
-                draw_fill_rect(player_2.x, player_2.y, player_2.w, player_2.h, "white")
-
-                draw_circle(ball.x, ball.y, ball.radius, "white")
-            }
-
-            function phisics(time) {
-                ball.x += ball.vx
-                ball.y += ball.vy
-                
-                if(ball.x < 0) {
-                    ball.vx = -ball.vx
-                    player_2_pt.points += 1
-                    ball.x = ball.radius
-                } else if(ball.x > canva.offsetWidth) {
-                    ball.vx = -ball.vx
-                    player_1_pt.points += 1
-                    ball.x = canva.offsetWidth - ball.radius
-                }
-
-                if(ball.y < 0 || ball.y > canva.offsetHeight) {
-                    ball.vy = -ball.vy
-                }
-
-                if(colision_rect_ball(player_1, ball)) {
-                    ball.vx = -ball.vx
-                    ball.vy = player_1.move == 0 ? -ball.vy : player_1.move
-
-                    // impede que a bola fique presa em alguns momentos
-                    ball.x = player_1.x + player_1.w + ball.radius
-                }
-
-                if(colision_rect_ball(player_2, ball)) {
-                    ball.vx = -ball.vx
-                    ball.vy = player_2.move == 0 ? -ball.vy : player_2.move
-
-                    // impede que a bola fique presa em alguns momentoss
-                    ball.x = player_2.x - ball.radius
-                }
-
-                player_1.y += player_1.move
-                if(player_1.y < 0 || player_1.y > canva.offsetHeight - player_1.h) {
-                    player_1.y -= player_1.move
-                }
-
-                player_2.y += player_2.move
-                if(player_2.y < 0 || player_2.y > canva.offsetHeight - player_1.h) {
-                    player_2.y -= player_2.move
-                }
-
-            }
-
-            function update() {
-                var time = new Date().getTime() - time_temp
-                draw(time)
-                phisics(time)
-                time_temp = new Date().getTime()
-                window.requestAnimationFrame(update)
-            }
-            update()
-
-        </script>
-        
-    </body>
+</body>
 </html>
