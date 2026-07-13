@@ -43,7 +43,7 @@
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const statusEl = document.getElementById('status');
-    const socket = io();
+    const socket = io({ transports: ['polling'] });
 
     socket.emit('entrar-controle');
     socket.on('connect', () => { statusEl.textContent = 'Conectado!'; });

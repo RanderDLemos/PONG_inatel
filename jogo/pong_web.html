@@ -13,7 +13,8 @@
             width: 100%;
         }
         body {
-            background-image: url('inatel.jpg'); /* troque depois */
+            background-color: #000; /* fallback caso a imagem não exista */
+            background-image: url('inatel.jpg'); /* opcional - coloque o arquivo em /jogo se quiser usar */
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
@@ -151,7 +152,7 @@
         }
 
         // --- INTEGRAÇÃO COM O CELULAR (via servidor Socket.io) ---
-        const socket = io();
+        const socket = io({ transports: ['polling'] });
         socket.emit('entrar-jogo');
 
         socket.on('mover-start', ({ direcao }) => {
