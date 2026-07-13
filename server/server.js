@@ -16,6 +16,9 @@ const SALA_FIXA = '0001';
 app.use('/jogo', express.static(path.join(__dirname, '../jogo')));
 app.use('/controle', express.static(path.join(__dirname, 'public')));
 
+// Serve arquivos da pasta public também na raiz (ex: /imprimir-qrcode.html)
+app.use(express.static(path.join(__dirname, 'public')));
+
 // Gera o QR Code sob demanda (usado pela página de impressão)
 app.get('/api/qrcode', async (req, res) => {
   const urlControle = `${req.protocol}://${req.get('host')}/controle/controle.html?sala=${SALA_FIXA}`;
