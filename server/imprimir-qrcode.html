@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Imprimir QR Code - Pong</title>
+<style>
+  body {
+    font-family: sans-serif;
+    background: #fff;
+    color: #111;
+    text-align: center;
+    margin: 0;
+    padding: 40px 20px;
+  }
+  h1 { font-size: 1.8rem; margin-bottom: 10px; }
+  p.instrucao { font-size: 1.1rem; color: #333; margin-bottom: 30px; }
+  img { width: 400px; height: 400px; border: 8px solid #111; border-radius: 12px; }
+  .sala { margin-top: 20px; font-size: 1rem; color: #666; }
+  button {
+    margin-top: 30px;
+    padding: 12px 24px;
+    font-size: 1rem;
+    border-radius: 8px;
+    border: none;
+    background: #111;
+    color: #fff;
+    cursor: pointer;
+  }
+  @media print {
+    button { display: none; }
+    body { padding: 0; }
+  }
+</style>
+</head>
+<body>
+  <h1>Escaneie para jogar Pong</h1>
+  <p class="instrucao">Aponte a câmera do celular para o QR Code abaixo</p>
+
+  <img id="qrimg" src="" alt="QR Code">
+  <div class="sala" id="salaInfo"></div>
+
+  <br>
+  <button onclick="window.print()">Imprimir</button>
+
+  <script>
+    fetch('/api/qrcode')
+      .then(res => res.json())
+      .then(({ sala, qrDataUrl, urlControle }) => {
+        document.getElementById('qrimg').src = qrDataUrl;
+        document.getElementById('salaInfo').textContent = `Sala: ${sala} — ${urlControle}`;
+      })
+      .catch(() => {
+        document.getElementById('salaInfo').textContent = 'Erro ao gerar QR Code. O servidor está rodando?';
+      });
+  </script>
+</body>
+</html>
