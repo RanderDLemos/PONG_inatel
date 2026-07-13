@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Controle - Pong</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: sans-serif;
+    text-align: center;
+    background: #111;
+    color: #fff;
+    margin: 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    user-select: none;
+  }
+  h2 { margin-bottom: 20px; }
+  button {
+    width: 80%;
+    height: 35vh;
+    font-size: 2rem;
+    margin: 10px;
+    border-radius: 16px;
+    border: none;
+    background: #333;
+    color: #fff;
+  }
+  button:active { background: #555; }
+  #status { margin-top: 10px; font-size: 0.9rem; color: #888; }
+</style>
+</head>
+<body>
+  <h2>Controle do Pong</h2>
+  <button id="cima">▲ Cima</button>
+  <button id="baixo">▼ Baixo</button>
+  <div id="status">conectando...</div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const statusEl = document.getElementById('status');
+    const socket = io();
+
+    socket.emit('entrar-controle');
+    socket.on('connect', () => { statusEl.textContent = 'Conectado!'; });
+
+    function iniciar(direcao) { socket.emit('mover-start', { direcao }); }
+    function parar(direcao) { socket.emit('mover-parar', { direcao }); }
+
+    const btnCima = document.getElementById('cima');
+    const btnBaixo = document.getElementById('baixo');
+
+    btnCima.addEventListener('touchstart', (e) => { e.preventDefault(); iniciar('cima'); });
+    btnCima.addEventListener('touchend', (e) => { e.preventDefault(); parar('cima'); });
+
+    btnBaixo.addEventListener('touchstart', (e) => { e.preventDefault(); iniciar('baixo'); });
+    btnBaixo.addEventListener('touchend', (e) => { e.preventDefault(); parar('baixo'); });
+  </script>
+</body>
+</html>

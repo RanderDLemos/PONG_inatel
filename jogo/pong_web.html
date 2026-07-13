@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pong Game</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            height: 100%;
+            width: 100%;
+        }
+        body {
+            background-image: url('inatel.jpg'); /* troque depois */
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+        #canva {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canva">O navegador não suporta canvas.</canvas>
+
+    <!-- Precisa vir ANTES do script do jogo, pois o jogo usa io() -->
+    <script src="/socket.io/socket.io.js"></script>
+
+    <script>
+        const canva = document.getElementById("canva");
+        const ctx = canva.getContext("2d");
+
+        // --- VARIÁVEIS DO JOGO ---
+        let player_1, player_2, ball, player_1_pt, player_2_pt;
+
+        function resizeCanvas() {
+            canva.width = window.innerWidth;
+            canva.height = window.innerHeight;
+            initGame(); // reinicia posições ao redimensionar
+        }
+
+        function initGame() {
+            player_1 = {x: 30, y: (canva.height / 2) - 50, w: 20, h: 100, move: 0}; // CPU
+            player_2 = {x: canva.width - 50, y: (canva.height / 2) - 50, w: 20, h: 100, move: 0}; // Celular
+            player_1_pt = {x: (canva.width / 2) - 100, y: 60, points: 0};
+            player_2_pt = {x: (canva.width / 2) + 60, y: 60, points: 0};
+            ball = {x: canva.width / 2, y: canva.height / 2, vx: 6, vy: 6, radius: 15};
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // --- FUNÇÕES DE DESENHO ---
+        function draw_fill_rect(x, y, w, h, color) {
+            ctx.fillStyle = color;
+            ctx.fillRect(x, y, w, h);
+        }
+        function draw_line(x1, y1, x2, y2, color, width = 1, dash = null) {
+            ctx.strokeStyle = color;
+            ctx.lineWidth = width;
+            if(dash) ctx.setLineDash(dash);
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+        function draw_text(text, x, y, color, size = 40, font = "Arial Black") {
+            ctx.fillStyle = color;
+            ctx.font = `${size}px ${font}`;
+            ctx.fillText(text, x, y);
+        }
+        function draw_circle(x, y, radius, color) {
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, 2 * Math.PI);
+            ctx.fill();
+        }
+        function colision_rect_ball(rect, ball) {
+            return (
+                (ball.x + ball.radius) > rect.x &&
+                (ball.x - ball.radius) < (rect.x + rect.w) &&
+                (ball.y + ball.radius) > rect.y &&
+                (ball.y - ball.radius) < (rect.y + rect.h)
+            );
+        }
+
+        // --- LÓGICA DO JOGO ---
+        function draw() {
+            ctx.clearRect(0, 0, canva.width, canva.height);
+            draw_line(canva.width / 2, 0, canva.width / 2, canva.height, "white", 3, [20, 15]);
+            draw_fill_rect(player_1.x, player_1.y, player_1.w, player_1.h, "white");
+            draw_fill_rect(player_2.x, player_2.y, player_2.w, player_2.h, "white");
+            draw_circle(ball.x, ball.y, ball.radius, "white");
+            draw_text(player_1_pt.points, player_1_pt.x, player_1_pt.y, "white");
+            draw_text(player_2_pt.points, player_2_pt.x, player_2_pt.y, "white");
+        }
+
+        // CPU persegue a bola (mesma lógica do modo 1 jogador original)
+        function moveCpu() {
+            const centro = player_1.y + player_1.h / 2;
+            if (centro < ball.y - 10) player_1.move = 5;
+            else if (centro > ball.y + 10) player_1.move = -5;
+            else player_1.move = 0;
+        }
+
+        function physics() {
+            moveCpu();
+
+            ball.x += ball.vx;
+            ball.y += ball.vy;
+
+            if (ball.y - ball.radius < 0 || ball.y + ball.radius > canva.height) {
+                ball.vy = -ball.vy;
+            }
+
+            if (ball.x - ball.radius < 0) {
+                player_2_pt.points++;
+                resetBall();
+            } else if (ball.x + ball.radius > canva.width) {
+                player_1_pt.points++;
+                resetBall();
+            }
+
+            if (colision_rect_ball(player_1, ball)) ball.vx = Math.abs(ball.vx);
+            if (colision_rect_ball(player_2, ball)) ball.vx = -Math.abs(ball.vx);
+
+            player_1.y += player_1.move;
+            player_2.y += player_2.move;
+
+            player_1.y = Math.max(0, Math.min(canva.height - player_1.h, player_1.y));
+            player_2.y = Math.max(0, Math.min(canva.height - player_2.h, player_2.y));
+        }
+
+        function resetBall() {
+            ball.x = canva.width / 2;
+            ball.y = canva.height / 2;
+            ball.vx = (Math.random() > 0.5 ? 6 : -6);
+            ball.vy = (Math.random() > 0.5 ? 6 : -6);
+        }
+
+        function update() {
+            physics();
+            draw();
+            requestAnimationFrame(update);
+        }
+
+        // --- INTEGRAÇÃO COM O CELULAR (via servidor Socket.io) ---
+        const socket = io();
+        socket.emit('entrar-jogo');
+
+        socket.on('mover-start', ({ direcao }) => {
+            if (direcao === 'cima') player_2.move = -8;
+            if (direcao === 'baixo') player_2.move = 8;
+        });
+
+        socket.on('mover-parar', () => {
+            player_2.move = 0;
+        });
+
+        update();
+    </script>
+</body>
+</html>
